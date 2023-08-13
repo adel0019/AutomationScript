@@ -5,6 +5,7 @@ from time import sleep
 import zipfile
 import os
 import logging
+import subprocess
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -25,6 +26,14 @@ image_extensions = [".jpg", ".jpeg", ".jpe", ".jif", ".jfif", ".jfi", ".png", ".
 document_extensions = [".doc", ".docx", ".odt",
                        ".pdf", ".xls", ".xlsx", ".ppt", ".pptx"]
 
+
+class AppUpdater:
+    def update_apps(self):
+        try:
+            subprocess.run(["winget", "upgrade", "--all"], check=True)
+            logging.info("Apps updated successfully.")
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Error while updating apps: {e}")
 
 def make_unique(dest, name):
     filename, extension = splitext(name)
@@ -62,10 +71,11 @@ class MoverHandler(FileSystemEventHandler):
             name = os.path.basename(entry)
             self.check_zip_files(entry, name)
 
+# Checks for update files in .msi or .exe format then puts them in Installations folder
     def check_installation_files(self, entry, name):
         if name.endswith('.exe') or name.endswith('.msi'):
             move_file(dest_dir_installations, entry, name)
-            logging.info(f"Moved image file: {name}")
+            logging.info(f"Moved installation file: {name}")
 
     def check_image_files(self, entry, name):
         for image_extension in image_extensions:
@@ -79,6 +89,7 @@ class MoverHandler(FileSystemEventHandler):
                 move_file(dest_dir_documents, entry, name)
                 logging.info(f"Moved document file: {name}")
 
+# Checks for zip files, extracts them, puts them into a folder then deletes the empty zip file
     def check_zip_files(self, entry, name):
         print(f"Checking zip file: {name}")
         if name.lower().endswith('.zip'):
@@ -101,9 +112,15 @@ if __name__ == "__main__":
     observer = Observer()
     observer.schedule(event_handler, path, recursive=True)
     observer.start()
+
+    app_updater = AppUpdater()
+
     try:
         while True:
-            sleep(10)
+            # Check for updates once a week
+            sleep_duration = 604800
+            sleep(sleep_duration)
+            app_updater.update_apps()
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
