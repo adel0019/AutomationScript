@@ -74,6 +74,15 @@ class MoverHandler(FileSystemEventHandler):
 # Checks for update files in .msi or .exe format then puts them in Installations folder
     def check_installation_files(self, entry, name):
         if name.endswith('.exe') or name.endswith('.msi'):
+            # Check if there's a corresponding .part file
+            part_file = entry + ".part"
+
+            if os.path.exists(part_file):
+                logging.info(f"Waiting for download to complete: {name}")
+                while os.path.exists(part_file):
+                    sleep(10)  # Adjust the interval as needed
+                    logging.info(f"Still waiting for download: {name}")
+
             move_file(dest_dir_installations, entry, name)
             logging.info(f"Moved installation file: {name}")
 
